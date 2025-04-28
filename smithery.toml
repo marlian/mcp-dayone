@@ -1,0 +1,22 @@
+[smithery]
+name = "MCP-DayOne"
+version = "1.0.0"
+description = "MCP server for Day One Journal integration with Claude Desktop"
+author = ""
+license = "MIT"
+
+[install]
+dependencies = [
+    "node >= 14.0.0",
+    "dayone2"
+]
+
+[install.steps]
+1 = "npm install"
+
+[run]
+command = "npm start"
+
+[documentation]
+homepage = "https://github.com/yourusername/mcp-dayone"
+
