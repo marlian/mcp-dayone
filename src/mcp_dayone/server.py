@@ -115,22 +115,16 @@ async def handle_create_journal_entry(args: CreateEntryArgs) -> list[TextContent
 async def handle_list_journals(args: ListJournalsArgs) -> list[TextContent]:
     """Handle listing available journals."""
     try:
-        journals = dayone_tools.list_journals()
-        if journals:
-            journal_list = "\n".join(f"• {journal}" for journal in journals)
-            return [TextContent(
-                type="text",
-                text=f"Available journals:\n{journal_list}"
-            )]
-        else:
-            return [TextContent(
-                type="text",
-                text="No journals found."
-            )]
+        messages = dayone_tools.list_journals()
+        journal_info = "\n".join(f"• {message}" for message in messages)
+        return [TextContent(
+            type="text",
+            text=f"Journal Information:\n{journal_info}"
+        )]
     except DayOneError as e:
         return [TextContent(
             type="text",
-            text=f"Error listing journals: {str(e)}"
+            text=f"Error getting journal information: {str(e)}"
         )]
 
 async def handle_get_entry_count(args: GetEntryCountArgs) -> list[TextContent]:
@@ -147,7 +141,7 @@ async def handle_get_entry_count(args: GetEntryCountArgs) -> list[TextContent]:
     except DayOneError as e:
         return [TextContent(
             type="text",
-            text=f"Error getting entry count: {str(e)}"
+            text=f"Entry count limitation: {str(e)}"
         )]
 
 async def handle_create_entry_with_attachments(args: CreateEntryWithAttachmentsArgs) -> list[TextContent]:

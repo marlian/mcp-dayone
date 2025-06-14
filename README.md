@@ -101,8 +101,8 @@ Once configured, you can interact with Day One through Claude Desktop:
 - **"Create a journal entry about my day"** - Claude will create an entry with your content
 - **"Create a starred entry about my vacation with photos from /path/to/photo.jpg"** - Creates entries with attachments and metadata
 - **"Add a journal entry with location coordinates for my current trip"** - Creates location-aware entries
-- **"List my Day One journals"** - Shows all available journals
-- **"How many entries do I have?"** - Shows total entry count
+- **"List my Day One journals"** - Shows journal usage information
+- **"How many entries do I have?"** - Explains CLI limitations for entry counting
 - **"Add tags #work #meeting to an entry about the team standup"** - Creates tagged entries
 
 ## Available MCP Tools
@@ -123,10 +123,10 @@ Once configured, you can interact with Day One through Claude Desktop:
    - Parameters: content, latitude, longitude, tags, journal, starred
    
 4. **list_journals**
-   - List all available journals
+   - Provides journal usage information (CLI doesn't support listing)
    
 5. **get_entry_count**
-   - Get entry count for specific journal or all journals
+   - Explains entry counting limitations (CLI doesn't support counting)
 
 ## Development
 
@@ -156,6 +156,12 @@ uv run pytest
 ### Permission Issues
 - Ensure Day One CLI has proper permissions to access your journals
 - Run Day One app once to initialize if needed
+
+### CLI Limitations
+- Day One CLI only supports creating entries (`new` command)
+- Listing journals and counting entries are not supported by the CLI
+- Use the Day One app interface to view journals and entry counts
+- All entry creation features (attachments, location, etc.) work fully
 
 ## License
 

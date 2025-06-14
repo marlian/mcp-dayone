@@ -77,8 +77,8 @@ This is an MCP (Message Control Protocol) server that provides integration betwe
    - **NEW**: all_day flag (full-day events)
 2. **create_entry_with_attachments** - Specialized tool for entries with file attachments
 3. **create_location_entry** - Specialized tool for location-aware entries
-4. **list_journals** - List available journals
-5. **get_entry_count** - Get entry count for journals
+4. **list_journals** - Provides journal usage information (CLI limitation)
+5. **get_entry_count** - Explains entry counting limitations (CLI limitation)
 
 ## Claude Desktop Integration
 

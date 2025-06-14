@@ -84,28 +84,23 @@ class DayOneTools:
                 raise DayOneError("Coordinates must include both 'latitude' and 'longitude'")
         
         # Build command
-        cmd = [self.cli_path, "new"]
+        cmd = [self.cli_path]
         
-        # Add content (properly escaped)
-        cmd.append(content)
+        # Add attachments
+        if attachments:
+            cmd.extend(["--attachments"] + attachments)
         
         # Add tags
         if tags:
-            for tag in tags:
-                cmd.append(f"#{tag}")
-        
-        # Add date
-        if date:
-            cmd.extend(["--date", date])
+            cmd.extend(["--tags"] + tags)
         
         # Add journal
         if journal:
             cmd.extend(["--journal", journal])
         
-        # Add attachments
-        if attachments:
-            for attachment in attachments:
-                cmd.extend(["--attachments", attachment])
+        # Add date
+        if date:
+            cmd.extend(["--date", date])
         
         # Add starred flag
         if starred:
@@ -113,7 +108,7 @@ class DayOneTools:
         
         # Add coordinates
         if coordinates:
-            coord_str = f"{coordinates['latitude']},{coordinates['longitude']}"
+            coord_str = f"{coordinates['latitude']} {coordinates['longitude']}"
             cmd.extend(["--coordinate", coord_str])
         
         # Add timezone
@@ -123,6 +118,9 @@ class DayOneTools:
         # Add all-day flag
         if all_day:
             cmd.append("--all-day")
+        
+        # Add the command and content
+        cmd.extend(["new", content])
         
         try:
             result = subprocess.run(
@@ -146,59 +144,38 @@ class DayOneTools:
     def list_journals(self) -> List[str]:
         """List available journals.
         
+        Note: Day One CLI doesn't provide a direct way to list journals.
+        This method returns a helpful message explaining the limitation.
+        
         Returns:
-            List of journal names
+            List with explanatory message
             
         Raises:
-            DayOneError: If listing fails
+            DayOneError: If there's an issue
         """
-        try:
-            result = subprocess.run(
-                [self.cli_path, "journals"],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            
-            # Parse journal names from output
-            journals = []
-            for line in result.stdout.strip().split('\n'):
-                if line.strip():
-                    journals.append(line.strip())
-            
-            return journals
-            
-        except subprocess.CalledProcessError as e:
-            raise DayOneError(f"Failed to list journals: {e.stderr}")
+        # Day One CLI doesn't have a journals command
+        return [
+            "Day One CLI doesn't provide a command to list journals.",
+            "You can specify a journal name using the --journal parameter when creating entries.",
+            "If no journal is specified, entries go to the default journal."
+        ]
     
     def get_entry_count(self, journal: Optional[str] = None) -> int:
         """Get total number of entries.
+        
+        Note: Day One CLI doesn't provide a command to count entries.
         
         Args:
             journal: Optional journal name to count entries for
             
         Returns:
-            Number of entries
+            Always returns -1 to indicate this functionality is not available
             
         Raises:
-            DayOneError: If count fails
+            DayOneError: If there's an issue
         """
-        cmd = [self.cli_path, "list"]
-        
-        if journal:
-            cmd.extend(["--journal", journal])
-        
-        try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            
-            # Count non-empty lines
-            lines = [line for line in result.stdout.strip().split('\n') if line.strip()]
-            return len(lines)
-            
-        except subprocess.CalledProcessError as e:
-            raise DayOneError(f"Failed to count entries: {e.stderr}")
+        # Day One CLI doesn't have a list command
+        raise DayOneError(
+            "Day One CLI doesn't provide a command to count entries. "
+            "You can view entry counts through the Day One app interface."
+        )
