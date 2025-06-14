@@ -124,16 +124,16 @@ The MCP server excels at retrieving historical entries for reflection and memory
 
 **Example Output:**
 ```
-📅 On This Day (06-14) - Found 3 entries:
+📅 On This Day (06-14) - Found 2 entries:
 
 🗓️ 2023 (2 years ago):
-   • Evening reflection (7:04 PM) - You wrote about feeling proud of bringing Keegan and 
-     Megan to the FORTIVE Box at T-Mobile Park. This entry includes photos and a video.
+   • Morning thoughts (8:30 AM) [Personal] - Reflection on summer goals and upcoming 
+     vacation plans. Looking forward to some time off to recharge and spend time with family.
    
-   • Midday quotes (12:49-12:51 PM) - Two entries with insights about emotions in 
-     professional settings:
-     • One about emotions being a valuable resource that shouldn't be ignored or hidden
-     • Another challenging the stigma around expressing emotion in workplace leadership
+🗓️ 2021 (4 years ago):
+   • Weekend activities (2:15 PM) [Travel] ⭐ - Great day exploring the local farmers market. 
+     Tried some amazing local honey and picked up fresh ingredients for dinner. This entry 
+     includes photos. #weekend #local #food
 
 No entries found for June 14th in other years (searched back 5 years).
 ```
