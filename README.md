@@ -110,14 +110,22 @@ Once configured, you can interact with Day One through Claude Desktop:
 1. **create_journal_entry** (Enhanced)
    - Create new Day One entries with rich metadata
    - **Basic Parameters**: content, tags, date, journal
-   - **NEW - Attachments**: attachments (up to 10 files: photos, videos, audio, PDFs)
-   - **NEW - Metadata**: starred (mark as important), coordinates (latitude/longitude)
-   - **NEW - Time**: timezone, all_day (full-day events)
+   - **Enhanced Features**: attachments, starred, coordinates, timezone, all_day
    
-2. **list_journals**
+2. **create_entry_with_attachments** (NEW)
+   - Specialized tool for creating entries with file attachments
+   - Supports photos, videos, audio, PDFs (up to 10 files)
+   - Parameters: content, attachments, tags, journal, starred
+   
+3. **create_location_entry** (NEW)
+   - Specialized tool for creating location-aware entries
+   - Add precise latitude/longitude coordinates
+   - Parameters: content, latitude, longitude, tags, journal, starred
+   
+4. **list_journals**
    - List all available journals
    
-3. **get_entry_count**
+5. **get_entry_count**
    - Get entry count for specific journal or all journals
 
 ## Development

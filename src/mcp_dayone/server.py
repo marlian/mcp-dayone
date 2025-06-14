@@ -40,6 +40,21 @@ class ListJournalsArgs(BaseModel):
 class GetEntryCountArgs(BaseModel):
     journal: str = Field(default="", description="Optional journal name to count entries for")
 
+class CreateEntryWithAttachmentsArgs(BaseModel):
+    content: str = Field(description="The text content of the journal entry")
+    attachments: list[str] = Field(description="List of file paths to attach (max 10)")
+    tags: list[str] = Field(default=[], description="Optional list of tags for the entry")
+    journal: str = Field(default="", description="Optional journal name")
+    starred: bool = Field(default=False, description="Mark entry as starred/important")
+
+class CreateLocationEntryArgs(BaseModel):
+    content: str = Field(description="The text content of the journal entry")
+    latitude: float = Field(description="Latitude coordinate")
+    longitude: float = Field(description="Longitude coordinate")
+    tags: list[str] = Field(default=[], description="Optional list of tags for the entry")
+    journal: str = Field(default="", description="Optional journal name")
+    starred: bool = Field(default=False, description="Mark entry as starred/important")
+
 # Global Day One tools instance
 dayone_tools: DayOneTools = None
 
@@ -60,6 +75,16 @@ def get_available_tools() -> list[Tool]:
             name="get_entry_count",
             description="Get the total number of entries in a journal",
             inputSchema=GetEntryCountArgs.model_json_schema(),
+        ),
+        Tool(
+            name="create_entry_with_attachments",
+            description="Create a journal entry with file attachments (photos, videos, audio, PDFs)",
+            inputSchema=CreateEntryWithAttachmentsArgs.model_json_schema(),
+        ),
+        Tool(
+            name="create_location_entry",
+            description="Create a journal entry with location coordinates",
+            inputSchema=CreateLocationEntryArgs.model_json_schema(),
         ),
     ]
 
@@ -125,6 +150,51 @@ async def handle_get_entry_count(args: GetEntryCountArgs) -> list[TextContent]:
             text=f"Error getting entry count: {str(e)}"
         )]
 
+async def handle_create_entry_with_attachments(args: CreateEntryWithAttachmentsArgs) -> list[TextContent]:
+    """Handle creating a journal entry with attachments."""
+    try:
+        uuid = dayone_tools.create_entry(
+            content=args.content,
+            attachments=args.attachments,
+            tags=args.tags if args.tags else None,
+            journal=args.journal if args.journal else None,
+            starred=args.starred if args.starred else None,
+        )
+        attachment_count = len(args.attachments)
+        return [TextContent(
+            type="text",
+            text=f"Successfully created journal entry with {attachment_count} attachment(s). UUID: {uuid}"
+        )]
+    except DayOneError as e:
+        return [TextContent(
+            type="text",
+            text=f"Error creating entry with attachments: {str(e)}"
+        )]
+
+async def handle_create_location_entry(args: CreateLocationEntryArgs) -> list[TextContent]:
+    """Handle creating a journal entry with location."""
+    try:
+        coordinates = {
+            "latitude": args.latitude,
+            "longitude": args.longitude
+        }
+        uuid = dayone_tools.create_entry(
+            content=args.content,
+            coordinates=coordinates,
+            tags=args.tags if args.tags else None,
+            journal=args.journal if args.journal else None,
+            starred=args.starred if args.starred else None,
+        )
+        return [TextContent(
+            type="text",
+            text=f"Successfully created location entry at {args.latitude}, {args.longitude}. UUID: {uuid}"
+        )]
+    except DayOneError as e:
+        return [TextContent(
+            type="text",
+            text=f"Error creating location entry: {str(e)}"
+        )]
+
 async def call_tool(request: CallToolRequest) -> CallToolResult:
     """Handle tool calls from Claude."""
     try:
@@ -137,6 +207,12 @@ async def call_tool(request: CallToolRequest) -> CallToolResult:
         elif request.name == "get_entry_count":
             args = GetEntryCountArgs(**request.arguments)
             content = await handle_get_entry_count(args)
+        elif request.name == "create_entry_with_attachments":
+            args = CreateEntryWithAttachmentsArgs(**request.arguments)
+            content = await handle_create_entry_with_attachments(args)
+        elif request.name == "create_location_entry":
+            args = CreateLocationEntryArgs(**request.arguments)
+            content = await handle_create_location_entry(args)
         else:
             raise ValueError(f"Unknown tool: {request.name}")
         
