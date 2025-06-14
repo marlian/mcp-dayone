@@ -117,6 +117,8 @@ Once configured, you can interact with Day One through Claude Desktop:
 ### 📖 **Reading & Searching**
 - **"Show me my recent journal entries"** - Displays recent entries with dates, tags, and previews
 - **"Search my journal for entries about work"** - Finds entries containing specific text
+- **"What were my journal entries on this day?"** - **NEW**: Shows "On This Day" entries from previous years
+- **"Show me entries from June 14th in past years"** - **NEW**: Date-specific historical entries
 - **"List my Day One journals with entry counts"** - Shows actual journals and statistics
 - **"How many entries do I have?"** - Gets real entry counts from database
 - **"Find entries from last week"** - Search by date ranges
@@ -144,9 +146,13 @@ Once configured, you can interact with Day One through Claude Desktop:
    - Parameters: journal (optional filter)
    - Returns: Actual entry count from database
 
+8. **get_entries_by_date** - **NEW**: Get "On This Day" entries from previous years
+   - Parameters: target_date (MM-DD or YYYY-MM-DD), years_back (default 5)
+   - Returns: Entries from the same date across multiple years with full content
+
 ### 📋 **Legacy Tools (CLI limitations)**
-8. **list_journals** - Provides guidance about CLI limitations
-9. **get_entry_count** - Explains CLI counting limitations
+9. **list_journals** - Provides guidance about CLI limitations
+10. **get_entry_count** - Explains CLI counting limitations
 
 ## Development
 

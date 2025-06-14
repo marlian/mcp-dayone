@@ -69,6 +69,10 @@ class ListJournalsFromDbArgs(BaseModel):
 class GetEntryCountFromDbArgs(BaseModel):
     journal: str = Field(default="", description="Optional journal name to count entries for")
 
+class GetEntriesByDateArgs(BaseModel):
+    target_date: str = Field(description="Target date in MM-DD or YYYY-MM-DD format (e.g., '06-14' for June 14th)")
+    years_back: int = Field(default=5, description="How many years back to search (default 5)")
+
 # Global Day One tools instance
 dayone_tools: DayOneTools = None
 
@@ -119,6 +123,11 @@ def get_available_tools() -> list[Tool]:
             name="get_entry_count_from_db",
             description="Get actual entry count from Day One database",
             inputSchema=GetEntryCountFromDbArgs.model_json_schema(),
+        ),
+        Tool(
+            name="get_entries_by_date",
+            description="Get journal entries for a specific date across multiple years ('On This Day' feature)",
+            inputSchema=GetEntriesByDateArgs.model_json_schema(),
         ),
     ]
 
@@ -368,6 +377,67 @@ async def handle_get_entry_count_from_db(args: GetEntryCountFromDbArgs) -> list[
             text=f"Error getting entry count: {str(e)}"
         )]
 
+async def handle_get_entries_by_date(args: GetEntriesByDateArgs) -> list[TextContent]:
+    """Handle getting entries by date ('On This Day')."""
+    try:
+        entries = dayone_tools.get_entries_by_date(
+            target_date=args.target_date,
+            years_back=args.years_back
+        )
+        
+        if not entries:
+            return [TextContent(
+                type="text",
+                text=f"No entries found for {args.target_date} in the past {args.years_back} years."
+            )]
+        
+        # Group entries by year for better display
+        from collections import defaultdict
+        entries_by_year = defaultdict(list)
+        for entry in entries:
+            entries_by_year[entry['year']].extend([entry])
+        
+        # Format results
+        result_lines = [f"📅 On This Day ({args.target_date}) - Found {len(entries)} entries:\n"]
+        
+        # Sort years in descending order (most recent first)
+        for year in sorted(entries_by_year.keys(), reverse=True):
+            year_entries = entries_by_year[year]
+            years_ago = year_entries[0]['years_ago']
+            
+            if years_ago == 0:
+                year_header = f"🗓️ {year} (This year):"
+            elif years_ago == 1:
+                year_header = f"🗓️ {year} (1 year ago):"
+            else:
+                year_header = f"🗓️ {year} ({years_ago} years ago):"
+            
+            result_lines.append(year_header)
+            
+            for entry in year_entries:
+                date_str = entry['creation_date'].strftime("%B %d, %Y at %H:%M") if entry['creation_date'] else "Unknown date"
+                starred_str = " ⭐" if entry['starred'] else ""
+                tags_str = f" #{' #'.join(entry['tags'])}" if entry['tags'] else ""
+                
+                # Show more content for "On This Day" memories
+                text_preview = entry['text'][:300] + "..." if len(entry['text']) > 300 else entry['text']
+                
+                result_lines.append(
+                    f"   • {date_str}{starred_str} [{entry['journal_name']}]\n"
+                    f"     {text_preview}{tags_str}\n"
+                )
+        
+        return [TextContent(
+            type="text",
+            text="\n".join(result_lines)
+        )]
+        
+    except DayOneError as e:
+        return [TextContent(
+            type="text",
+            text=f"Error getting entries by date: {str(e)}"
+        )]
+
 
 
 async def main():
@@ -421,6 +491,9 @@ async def main():
                 elif name == "get_entry_count_from_db":
                     args = GetEntryCountFromDbArgs(**arguments)
                     return await handle_get_entry_count_from_db(args)
+                elif name == "get_entries_by_date":
+                    args = GetEntriesByDateArgs(**arguments)
+                    return await handle_get_entries_by_date(args)
                 else:
                     raise ValueError(f"Unknown tool: {name}")
             

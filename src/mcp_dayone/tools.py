@@ -543,3 +543,113 @@ class DayOneTools:
             return markdown_text.strip()
         
         return ""
+    
+    def get_entries_by_date(self, target_date: str, years_back: int = 5) -> List[Dict[str, Any]]:
+        """Get journal entries for a specific date across multiple years ('On This Day').
+        
+        Args:
+            target_date: Target date in MM-DD format (e.g., '06-14' for June 14th)
+            years_back: How many years back to search (default 5)
+            
+        Returns:
+            List of entries from this date in previous years
+            
+        Raises:
+            DayOneError: If database access fails
+        """
+        try:
+            # Parse and validate date format
+            from datetime import datetime, timedelta
+            
+            # Handle different date formats
+            if len(target_date) == 5 and '-' in target_date:  # MM-DD
+                month, day = target_date.split('-')
+            elif len(target_date) == 10:  # YYYY-MM-DD
+                month, day = target_date.split('-')[1:3]
+            else:
+                # Try parsing various formats
+                try:
+                    parsed_date = datetime.strptime(target_date, '%Y-%m-%d')
+                    month, day = f"{parsed_date.month:02d}", f"{parsed_date.day:02d}"
+                except ValueError:
+                    try:
+                        parsed_date = datetime.strptime(target_date, '%m-%d')
+                        month, day = f"{parsed_date.month:02d}", f"{parsed_date.day:02d}"
+                    except ValueError:
+                        raise DayOneError(f"Invalid date format: {target_date}. Use MM-DD or YYYY-MM-DD format.")
+            
+            conn = self._get_db_connection()
+            cursor = conn.cursor()
+            
+            # Get current year to search backwards
+            current_year = datetime.now().year
+            
+            # Build query to find entries on this date across multiple years
+            date_conditions = []
+            params = []
+            
+            for year in range(current_year - years_back, current_year + 1):
+                # Create date range for the full day
+                start_date = datetime(year, int(month), int(day))
+                end_date = start_date + timedelta(days=1)
+                
+                # Convert to Core Data timestamp (seconds since 2001-01-01)
+                start_timestamp = (start_date.timestamp() - 978307200)
+                end_timestamp = (end_date.timestamp() - 978307200)
+                
+                date_conditions.append("(e.ZCREATIONDATE >= ? AND e.ZCREATIONDATE < ?)")
+                params.extend([start_timestamp, end_timestamp])
+            
+            query = f"""
+            SELECT 
+                e.ZUUID as uuid,
+                e.ZRICHTEXTJSON as rich_text,
+                e.ZMARKDOWNTEXT as markdown_text,
+                e.ZCREATIONDATE as creationDate,
+                e.ZMODIFIEDDATE as modifiedDate,
+                e.ZSTARRED as starred,
+                e.ZTIMEZONE as timeZone,
+                j.ZNAME as journal_name,
+                e.ZLOCATION as location,
+                e.ZWEATHER as weather
+            FROM ZENTRY e
+            LEFT JOIN ZJOURNAL j ON e.ZJOURNAL = j.Z_PK
+            WHERE ({' OR '.join(date_conditions)})
+            ORDER BY e.ZCREATIONDATE DESC
+            """
+            
+            cursor.execute(query, params)
+            entries = []
+            
+            for row in cursor.fetchall():
+                # Extract text content
+                text_content = self._extract_text_content(row['rich_text'], row['markdown_text'])
+                
+                entry_date = datetime.fromtimestamp(row['creationDate'] + 978307200) if row['creationDate'] else None
+                
+                entry = {
+                    'uuid': row['uuid'],
+                    'text': text_content or '',
+                    'creation_date': entry_date,
+                    'modified_date': datetime.fromtimestamp(row['modifiedDate'] + 978307200) if row['modifiedDate'] else None,
+                    'starred': bool(row['starred']),
+                    'timezone': str(row['timeZone']) if row['timeZone'] else None,
+                    'journal_name': row['journal_name'] or 'Default',
+                    'has_location': bool(row['location']),
+                    'has_weather': bool(row['weather']),
+                    'year': entry_date.year if entry_date else None,
+                    'years_ago': current_year - entry_date.year if entry_date else None
+                }
+                
+                # Get tags for this entry
+                entry['tags'] = self._get_entry_tags(cursor, row['uuid'])
+                
+                entries.append(entry)
+            
+            conn.close()
+            return entries
+            
+        except sqlite3.Error as e:
+            raise DayOneError(f"Failed to get entries by date: {e}")
+        except ValueError as e:
+            raise DayOneError(f"Date parsing error: {e}")
