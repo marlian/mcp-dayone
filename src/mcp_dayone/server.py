@@ -8,8 +8,10 @@ from mcp.server import Server
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 from mcp.types import (
+    ServerCapabilities,
     TextContent,
     Tool,
+    ToolsCapability,
 )
 from pydantic import BaseModel, Field
 
@@ -237,20 +239,16 @@ async def main():
                     text=f"Error: {str(e)}"
                 )]
         
-        # Initialize options
-        options = InitializationOptions(
-            server_name="mcp-dayone",
-            server_version="2.0.0",
-            capabilities=server.get_capabilities(
-                notification_options=None,
-                experimental_capabilities=None,
-            ),
-        )
-        
         await server.run(
             read_stream,
             write_stream,
-            options,
+            InitializationOptions(
+                server_name="mcp-dayone",
+                server_version="2.0.0",
+                capabilities=ServerCapabilities(
+                    tools=ToolsCapability(listChanged=False)
+                ),
+            ),
         )
 
 if __name__ == "__main__":
