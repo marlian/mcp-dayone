@@ -8,9 +8,6 @@ from mcp.server import Server
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 from mcp.types import (
-    CallToolRequest,
-    CallToolResult,
-    ListToolsRequest,
     TextContent,
     Tool,
 )
@@ -189,42 +186,7 @@ async def handle_create_location_entry(args: CreateLocationEntryArgs) -> list[Te
             text=f"Error creating location entry: {str(e)}"
         )]
 
-async def call_tool(request: CallToolRequest) -> CallToolResult:
-    """Handle tool calls from Claude."""
-    try:
-        if request.name == "create_journal_entry":
-            args = CreateEntryArgs(**request.arguments)
-            content = await handle_create_journal_entry(args)
-        elif request.name == "list_journals":
-            args = ListJournalsArgs(**request.arguments)
-            content = await handle_list_journals(args)
-        elif request.name == "get_entry_count":
-            args = GetEntryCountArgs(**request.arguments)
-            content = await handle_get_entry_count(args)
-        elif request.name == "create_entry_with_attachments":
-            args = CreateEntryWithAttachmentsArgs(**request.arguments)
-            content = await handle_create_entry_with_attachments(args)
-        elif request.name == "create_location_entry":
-            args = CreateLocationEntryArgs(**request.arguments)
-            content = await handle_create_location_entry(args)
-        else:
-            raise ValueError(f"Unknown tool: {request.name}")
-        
-        return CallToolResult(content=content)
-    
-    except Exception as e:
-        logger.error(f"Error in call_tool: {e}")
-        return CallToolResult(
-            content=[TextContent(
-                type="text",
-                text=f"Error: {str(e)}"
-            )],
-            isError=True,
-        )
 
-async def list_tools(request: ListToolsRequest) -> list[Tool]:
-    """List available tools."""
-    return get_available_tools()
 
 async def main():
     """Main server entry point."""
@@ -243,8 +205,37 @@ async def main():
         server = Server("mcp-dayone")
         
         # Register handlers
-        server.list_tools = list_tools
-        server.call_tool = call_tool
+        @server.list_tools()
+        async def handle_list_tools() -> list[Tool]:
+            return get_available_tools()
+        
+        @server.call_tool()
+        async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
+            try:
+                if name == "create_journal_entry":
+                    args = CreateEntryArgs(**arguments)
+                    return await handle_create_journal_entry(args)
+                elif name == "list_journals":
+                    args = ListJournalsArgs(**arguments)
+                    return await handle_list_journals(args)
+                elif name == "get_entry_count":
+                    args = GetEntryCountArgs(**arguments)
+                    return await handle_get_entry_count(args)
+                elif name == "create_entry_with_attachments":
+                    args = CreateEntryWithAttachmentsArgs(**arguments)
+                    return await handle_create_entry_with_attachments(args)
+                elif name == "create_location_entry":
+                    args = CreateLocationEntryArgs(**arguments)
+                    return await handle_create_location_entry(args)
+                else:
+                    raise ValueError(f"Unknown tool: {name}")
+            
+            except Exception as e:
+                logger.error(f"Error in call_tool: {e}")
+                return [TextContent(
+                    type="text",
+                    text=f"Error: {str(e)}"
+                )]
         
         # Initialize options
         options = InitializationOptions(
