@@ -3,7 +3,7 @@ name = "mcp-dayone"
 version = "2.0.0"
 description = "MCP server for Day One Journal integration with Claude Desktop"
 authors = [
-    {name = "Kevin Davison", email = "kevin.davison@Quevin.com"}
+    {name = "Kevin Davison", email = "kevin.davison@quevin.com"}
 ]
 readme = "README.md"
 license = {text = "MIT"}
