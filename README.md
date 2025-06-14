@@ -1,6 +1,6 @@
 # MCP-DayOne
 
-A Message Control Protocol (MCP) server for Day One Journal integration with Claude Desktop.
+A Mode Context Protocol (MCP) server for Day One Journal integration with Claude Desktop.
 
 ## Overview
 
