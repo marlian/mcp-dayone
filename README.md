@@ -1,66 +1,129 @@
 # MCP-DayOne
 
-A Message Control Protocol (MCP) server for Day One Journal integration with Claude Desktop and Smithery.
+A Message Control Protocol (MCP) server for Day One Journal integration with Claude Desktop.
 
 ## Overview
 
-This server provides an API interface to the Day One CLI (`dayone2`), allowing Claude Desktop and other applications to interact with your Day One journal.
+This MCP server enables Claude Desktop to interact with your Day One journal through the Model Context Protocol. Claude can create journal entries, list available journals, and get entry counts directly through natural conversation.
+
+## Features
+
+- 📝 Create journal entries with content, tags, dates, and journal selection
+- 📚 List all available Day One journals
+- 📊 Get entry counts for journals
+- 🔧 Proper error handling and validation
+- 🚀 Easy installation with `uv`
 
 ## Prerequisites
 
-- Day One CLI (`dayone2`) installed on your system
-- Node.js and npm
+- **Day One CLI** (`dayone2`) - [Install from Day One website](https://dayoneapp.com/guides/command-line-interface/)
+- **Python 3.11+** 
+- **uv** - [Install from astral.sh](https://astral.sh/uv/install.sh)
 
 ## Installation
 
-1. Clone this repository
-2. Run `npm install` to install dependencies
-3. Create a `.env` file (see `.env.example`)
-4. Run `npm start` to start the server
+### 1. Install Prerequisites
 
-## API Endpoints
+```bash
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-### POST /api/entry
+# Verify Day One CLI is installed
+dayone2 --version
+```
 
-Creates a new entry in your Day One journal.
+### 2. Clone and Setup
 
-**Request Body:**
+```bash
+git clone <repository-url>
+cd mcp-dayone
+uv sync
+```
 
+### 3. Configure Claude Desktop
+
+Add the following to your Claude Desktop configuration file:
+
+**Location:**
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+**Configuration:**
 ```json
 {
-  "content": "Your journal entry text",
-  "tags": ["optional", "tags"],
-  "date": "YYYY-MM-DD HH:MM:SS", // Optional
-  "journal": "Journal Name" // Optional
+  "mcpServers": {
+    "dayone": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/FULL/PATH/TO/mcp-dayone",
+        "run",
+        "python",
+        "-m",
+        "mcp_dayone.server"
+      ]
+    }
+  }
 }
 ```
 
-**Response:**
+**Important:** Replace `/FULL/PATH/TO/mcp-dayone` with the absolute path to your cloned repository.
 
-```json
-{
-  "success": true,
-  "result": "Created new entry with uuid: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-}
+### 4. Restart Claude Desktop
+
+After updating the configuration, restart Claude Desktop to load the MCP server.
+
+## Usage
+
+Once configured, you can interact with Day One through Claude Desktop:
+
+- **"Create a journal entry about my day"** - Claude will create an entry with your content
+- **"List my Day One journals"** - Shows all available journals
+- **"How many entries do I have?"** - Shows total entry count
+- **"Add tags #work #meeting to an entry about the team standup"** - Creates tagged entries
+
+## Available MCP Tools
+
+1. **create_journal_entry**
+   - Create new Day One entries
+   - Parameters: content, tags, date, journal
+   
+2. **list_journals**
+   - List all available journals
+   
+3. **get_entry_count**
+   - Get entry count for specific journal or all journals
+
+## Development
+
+```bash
+# Install development dependencies
+uv sync --dev
+
+# Run the server directly (for testing)
+uv run python -m mcp_dayone.server
+
+# Run tests (when implemented)
+uv run pytest
 ```
 
-### GET /health
+## Troubleshooting
 
-Check if the server is running.
+### Day One CLI Not Found
+- Verify Day One CLI is installed: `dayone2 --version`  
+- Check that `dayone2` is in your PATH
+- Install from: https://dayoneapp.com/guides/command-line-interface/
 
-**Response:**
+### Claude Desktop Connection Issues
+- Verify the absolute path in `claude_desktop_config.json`
+- Check Claude Desktop logs for MCP server errors
+- Restart Claude Desktop after configuration changes
 
-```json
-{
-  "status": "ok"
-}
-```
+### Permission Issues
+- Ensure Day One CLI has proper permissions to access your journals
+- Run Day One app once to initialize if needed
 
-## Integration with Claude Desktop
+## License
 
-This MCP server can be used with Claude Desktop to create journal entries automatically.
-
-## Integration with Smithery
-
-This project can be shared on [Smithery](https://smithery.ai/) to allow others to use and contribute to it.
+MIT
 
