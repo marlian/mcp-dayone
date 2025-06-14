@@ -4,6 +4,7 @@ import subprocess
 import json
 import os
 import sqlite3
+import re
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from pathlib import Path
@@ -250,21 +251,7 @@ class DayOneTools:
             
             for row in cursor.fetchall():
                 # Extract text from rich text JSON or markdown
-                text_content = ""
-                if row['rich_text']:
-                    # Try to extract text from rich text JSON
-                    try:
-                        import json
-                        rich_data = json.loads(row['rich_text'])
-                        # Rich text format varies, try to extract plain text
-                        if isinstance(rich_data, dict) and 'text' in rich_data:
-                            text_content = rich_data['text']
-                        elif isinstance(rich_data, str):
-                            text_content = rich_data
-                    except:
-                        text_content = row['rich_text'][:500] if row['rich_text'] else ""
-                elif row['markdown_text']:
-                    text_content = row['markdown_text']
+                text_content = self._extract_text_content(row['rich_text'], row['markdown_text'])
                 
                 entry = {
                     'uuid': row['uuid'],
@@ -351,18 +338,7 @@ class DayOneTools:
             
             for row in cursor.fetchall():
                 # Extract text from rich text JSON or markdown
-                text_content = ""
-                if row['rich_text']:
-                    try:
-                        rich_data = json.loads(row['rich_text'])
-                        if isinstance(rich_data, dict) and 'text' in rich_data:
-                            text_content = rich_data['text']
-                        elif isinstance(rich_data, str):
-                            text_content = rich_data
-                    except:
-                        text_content = row['rich_text'][:500] if row['rich_text'] else ""
-                elif row['markdown_text']:
-                    text_content = row['markdown_text']
+                text_content = self._extract_text_content(row['rich_text'], row['markdown_text'])
                 
                 entry = {
                     'uuid': row['uuid'],
@@ -456,3 +432,114 @@ class DayOneTools:
             
         except sqlite3.Error as e:
             raise DayOneError(f"Failed to count entries from database: {e}")
+    
+    def _extract_text_content(self, rich_text_json: Optional[str], markdown_text: Optional[str]) -> str:
+        """Extract readable text content from Day One's rich text JSON or markdown.
+        
+        Args:
+            rich_text_json: Rich text JSON string from Day One
+            markdown_text: Markdown text alternative
+            
+        Returns:
+            Extracted text content
+        """
+        if not rich_text_json and not markdown_text:
+            return ""
+        
+        # Try to extract from rich text JSON first
+        if rich_text_json:
+            try:
+                rich_data = json.loads(rich_text_json)
+                
+                # Handle different rich text JSON structures
+                if isinstance(rich_data, dict):
+                    # Look for common text fields in Day One's rich text format
+                    if 'text' in rich_data:
+                        return str(rich_data['text']).strip()
+                    
+                    # Handle attributedString format
+                    if 'attributedString' in rich_data:
+                        attr_string = rich_data['attributedString']
+                        if isinstance(attr_string, dict) and 'string' in attr_string:
+                            return str(attr_string['string']).strip()
+                    
+                    # Handle ops format (similar to Quill.js delta format)
+                    if 'ops' in rich_data:
+                        text_parts = []
+                        for op in rich_data['ops']:
+                            if isinstance(op, dict) and 'insert' in op:
+                                insert_value = op['insert']
+                                if isinstance(insert_value, str):
+                                    text_parts.append(insert_value)
+                                elif isinstance(insert_value, dict) and 'text' in insert_value:
+                                    text_parts.append(str(insert_value['text']))
+                        return ''.join(text_parts).strip()
+                    
+                    # Handle delta format
+                    if 'delta' in rich_data:
+                        delta = rich_data['delta']
+                        if isinstance(delta, dict) and 'ops' in delta:
+                            text_parts = []
+                            for op in delta['ops']:
+                                if isinstance(op, dict) and 'insert' in op:
+                                    text_parts.append(str(op['insert']))
+                            return ''.join(text_parts).strip()
+                    
+                    # Handle NSAttributedString format (macOS native)
+                    if 'NSString' in rich_data:
+                        return str(rich_data['NSString']).strip()
+                    
+                    # Fallback: try to find any string values in the JSON
+                    def extract_strings(obj, max_depth=3):
+                        if max_depth <= 0:
+                            return []
+                        
+                        strings = []
+                        if isinstance(obj, str) and len(obj.strip()) > 0:
+                            strings.append(obj.strip())
+                        elif isinstance(obj, dict):
+                            for value in obj.values():
+                                strings.extend(extract_strings(value, max_depth - 1))
+                        elif isinstance(obj, list):
+                            for item in obj:
+                                strings.extend(extract_strings(item, max_depth - 1))
+                        return strings
+                    
+                    extracted_strings = extract_strings(rich_data)
+                    if extracted_strings:
+                        # Return the longest meaningful string
+                        meaningful_strings = [s for s in extracted_strings if len(s) > 10]
+                        if meaningful_strings:
+                            return max(meaningful_strings, key=len)
+                        elif extracted_strings:
+                            return extracted_strings[0]
+                
+                elif isinstance(rich_data, str):
+                    return rich_data.strip()
+                
+            except (json.JSONDecodeError, KeyError, TypeError):
+                # If JSON parsing fails, try to extract plain text from the raw string
+                if rich_text_json.strip():
+                    # Remove common JSON artifacts and extract readable text
+                    # Remove JSON structure characters but keep content
+                    cleaned = re.sub(r'[{}\[\]"]', ' ', rich_text_json)
+                    cleaned = re.sub(r'\\n', '\n', cleaned)
+                    cleaned = re.sub(r'\\t', '\t', cleaned)
+                    cleaned = re.sub(r'\s+', ' ', cleaned)
+                    
+                    # Look for sentences (text with punctuation and reasonable length)
+                    sentences = re.findall(r'[A-Z][^.!?]*[.!?]', cleaned)
+                    if sentences:
+                        return ' '.join(sentences[:3]).strip()  # First few sentences
+                    
+                    # Fallback to first meaningful chunk
+                    words = cleaned.split()
+                    meaningful_words = [w for w in words if len(w) > 2 and w.isalpha()]
+                    if len(meaningful_words) >= 5:
+                        return ' '.join(meaningful_words[:20]).strip()
+        
+        # Fallback to markdown text
+        if markdown_text:
+            return markdown_text.strip()
+        
+        return ""
