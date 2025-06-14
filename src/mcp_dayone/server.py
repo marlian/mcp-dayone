@@ -54,6 +54,21 @@ class CreateLocationEntryArgs(BaseModel):
     journal: str = Field(default="", description="Optional journal name")
     starred: bool = Field(default=False, description="Mark entry as starred/important")
 
+class ReadRecentEntriesArgs(BaseModel):
+    limit: int = Field(default=10, description="Maximum number of entries to return (1-50)")
+    journal: str = Field(default="", description="Optional journal name to filter by")
+
+class SearchEntriesArgs(BaseModel):
+    search_text: str = Field(description="Text to search for in entry content")
+    limit: int = Field(default=20, description="Maximum number of entries to return (1-50)")
+    journal: str = Field(default="", description="Optional journal name to filter by")
+
+class ListJournalsFromDbArgs(BaseModel):
+    pass
+
+class GetEntryCountFromDbArgs(BaseModel):
+    journal: str = Field(default="", description="Optional journal name to count entries for")
+
 # Global Day One tools instance
 dayone_tools: DayOneTools = None
 
@@ -84,6 +99,26 @@ def get_available_tools() -> list[Tool]:
             name="create_location_entry",
             description="Create a journal entry with location coordinates",
             inputSchema=CreateLocationEntryArgs.model_json_schema(),
+        ),
+        Tool(
+            name="read_recent_entries",
+            description="Read recent journal entries from Day One database",
+            inputSchema=ReadRecentEntriesArgs.model_json_schema(),
+        ),
+        Tool(
+            name="search_entries",
+            description="Search journal entries by text content",
+            inputSchema=SearchEntriesArgs.model_json_schema(),
+        ),
+        Tool(
+            name="list_journals_from_db",
+            description="List all journals from database with entry counts",
+            inputSchema=ListJournalsFromDbArgs.model_json_schema(),
+        ),
+        Tool(
+            name="get_entry_count_from_db",
+            description="Get actual entry count from Day One database",
+            inputSchema=GetEntryCountFromDbArgs.model_json_schema(),
         ),
     ]
 
@@ -188,6 +223,151 @@ async def handle_create_location_entry(args: CreateLocationEntryArgs) -> list[Te
             text=f"Error creating location entry: {str(e)}"
         )]
 
+async def handle_read_recent_entries(args: ReadRecentEntriesArgs) -> list[TextContent]:
+    """Handle reading recent journal entries."""
+    try:
+        # Validate limit
+        limit = max(1, min(50, args.limit))
+        
+        entries = dayone_tools.read_recent_entries(
+            limit=limit,
+            journal=args.journal if args.journal else None
+        )
+        
+        if not entries:
+            return [TextContent(
+                type="text",
+                text="No entries found."
+            )]
+        
+        # Format entries for display
+        result_lines = [f"Found {len(entries)} recent entries:\n"]
+        
+        for i, entry in enumerate(entries, 1):
+            date_str = entry['creation_date'].strftime("%Y-%m-%d %H:%M") if entry['creation_date'] else "Unknown date"
+            starred_str = " ⭐" if entry['starred'] else ""
+            tags_str = f" #{' #'.join(entry['tags'])}" if entry['tags'] else ""
+            
+            # Truncate text for preview
+            text_preview = entry['text'][:100] + "..." if len(entry['text']) > 100 else entry['text']
+            
+            result_lines.append(
+                f"{i}. {date_str}{starred_str} [{entry['journal_name']}]\n"
+                f"   {text_preview}{tags_str}\n"
+            )
+        
+        return [TextContent(
+            type="text",
+            text="\n".join(result_lines)
+        )]
+        
+    except DayOneError as e:
+        return [TextContent(
+            type="text",
+            text=f"Error reading entries: {str(e)}"
+        )]
+
+async def handle_search_entries(args: SearchEntriesArgs) -> list[TextContent]:
+    """Handle searching journal entries."""
+    try:
+        # Validate limit
+        limit = max(1, min(50, args.limit))
+        
+        entries = dayone_tools.search_entries(
+            search_text=args.search_text,
+            limit=limit,
+            journal=args.journal if args.journal else None
+        )
+        
+        if not entries:
+            return [TextContent(
+                type="text",
+                text=f"No entries found matching '{args.search_text}'."
+            )]
+        
+        # Format search results
+        result_lines = [f"Found {len(entries)} entries matching '{args.search_text}':\n"]
+        
+        for i, entry in enumerate(entries, 1):
+            date_str = entry['creation_date'].strftime("%Y-%m-%d %H:%M") if entry['creation_date'] else "Unknown date"
+            starred_str = " ⭐" if entry['starred'] else ""
+            tags_str = f" #{' #'.join(entry['tags'])}" if entry['tags'] else ""
+            
+            # Show more context for search results
+            text_preview = entry['text'][:200] + "..." if len(entry['text']) > 200 else entry['text']
+            
+            result_lines.append(
+                f"{i}. {date_str}{starred_str} [{entry['journal_name']}]\n"
+                f"   {text_preview}{tags_str}\n"
+            )
+        
+        return [TextContent(
+            type="text",
+            text="\n".join(result_lines)
+        )]
+        
+    except DayOneError as e:
+        return [TextContent(
+            type="text",
+            text=f"Error searching entries: {str(e)}"
+        )]
+
+async def handle_list_journals_from_db(args: ListJournalsFromDbArgs) -> list[TextContent]:
+    """Handle listing journals from database."""
+    try:
+        journals = dayone_tools.list_journals_from_db()
+        
+        if not journals:
+            return [TextContent(
+                type="text",
+                text="No journals found in database."
+            )]
+        
+        # Format journal list
+        result_lines = ["Your Day One Journals:\n"]
+        
+        for journal in journals:
+            last_entry_str = ""
+            if journal['last_entry_date']:
+                last_entry_str = f" (last entry: {journal['last_entry_date'].strftime('%Y-%m-%d')})"
+            
+            result_lines.append(
+                f"• {journal['name']}: {journal['entry_count']} entries{last_entry_str}"
+            )
+        
+        total_entries = sum(j['entry_count'] for j in journals)
+        result_lines.append(f"\nTotal: {len(journals)} journals, {total_entries} entries")
+        
+        return [TextContent(
+            type="text",
+            text="\n".join(result_lines)
+        )]
+        
+    except DayOneError as e:
+        return [TextContent(
+            type="text",
+            text=f"Error listing journals: {str(e)}"
+        )]
+
+async def handle_get_entry_count_from_db(args: GetEntryCountFromDbArgs) -> list[TextContent]:
+    """Handle getting entry count from database."""
+    try:
+        count = dayone_tools.get_entry_count_from_db(
+            journal=args.journal if args.journal else None
+        )
+        
+        journal_text = f" in journal '{args.journal}'" if args.journal else ""
+        return [TextContent(
+            type="text",
+            text=f"Total entries{journal_text}: {count}"
+        )]
+        
+    except DayOneError as e:
+        return [TextContent(
+            type="text",
+            text=f"Error getting entry count: {str(e)}"
+        )]
+
 
 
 async def main():
@@ -229,6 +409,18 @@ async def main():
                 elif name == "create_location_entry":
                     args = CreateLocationEntryArgs(**arguments)
                     return await handle_create_location_entry(args)
+                elif name == "read_recent_entries":
+                    args = ReadRecentEntriesArgs(**arguments)
+                    return await handle_read_recent_entries(args)
+                elif name == "search_entries":
+                    args = SearchEntriesArgs(**arguments)
+                    return await handle_search_entries(args)
+                elif name == "list_journals_from_db":
+                    args = ListJournalsFromDbArgs(**arguments)
+                    return await handle_list_journals_from_db(args)
+                elif name == "get_entry_count_from_db":
+                    args = GetEntryCountFromDbArgs(**arguments)
+                    return await handle_get_entry_count_from_db(args)
                 else:
                     raise ValueError(f"Unknown tool: {name}")
             

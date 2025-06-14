@@ -8,14 +8,24 @@ This MCP server enables Claude Desktop to interact with your Day One journal thr
 
 ## Features
 
+### ✍️ **Write Operations (Day One CLI)**
 - 📝 Create journal entries with rich content and metadata
-- 📎 **NEW**: Add attachments (photos, videos, audio, PDFs) to entries
-- ⭐ **NEW**: Mark entries as starred/important
-- 📍 **NEW**: Add location coordinates to entries
-- 🕐 **NEW**: Enhanced date/time handling with timezone support
-- 📚 List all available Day One journals
-- 📊 Get entry counts for journals
-- 🔧 Proper error handling and validation
+- 📎 Add attachments (photos, videos, audio, PDFs) to entries
+- ⭐ Mark entries as starred/important
+- 📍 Add location coordinates to entries
+- 🕐 Enhanced date/time handling with timezone support
+
+### 📖 **Read Operations (Direct Database Access)**
+- 📖 **NEW**: Read recent journal entries with full metadata
+- 🔍 **NEW**: Search entries by text content
+- 📚 **NEW**: List actual journals with entry counts and statistics
+- 📊 **NEW**: Get real entry counts from database
+- 🏷️ **NEW**: View entry tags, dates, and metadata
+
+### 🔧 **Technical**
+- Proper error handling and validation
+- Direct SQLite database integration for read operations
+- Hybrid approach: CLI for writing, database for reading
 - 🚀 Easy installation with `uv`
 
 ## Prerequisites
@@ -98,35 +108,45 @@ After updating the configuration, restart Claude Desktop to load the MCP server.
 
 Once configured, you can interact with Day One through Claude Desktop:
 
-- **"Create a journal entry about my day"** - Claude will create an entry with your content
+### ✍️ **Creating Entries**
+- **"Create a journal entry about my day"** - Creates entry with your content
 - **"Create a starred entry about my vacation with photos from /path/to/photo.jpg"** - Creates entries with attachments and metadata
 - **"Add a journal entry with location coordinates for my current trip"** - Creates location-aware entries
-- **"List my Day One journals"** - Shows journal usage information
-- **"How many entries do I have?"** - Explains CLI limitations for entry counting
 - **"Add tags #work #meeting to an entry about the team standup"** - Creates tagged entries
+
+### 📖 **Reading & Searching**
+- **"Show me my recent journal entries"** - Displays recent entries with dates, tags, and previews
+- **"Search my journal for entries about work"** - Finds entries containing specific text
+- **"List my Day One journals with entry counts"** - Shows actual journals and statistics
+- **"How many entries do I have?"** - Gets real entry counts from database
+- **"Find entries from last week"** - Search by date ranges
 
 ## Available MCP Tools
 
-1. **create_journal_entry** (Enhanced)
-   - Create new Day One entries with rich metadata
-   - **Basic Parameters**: content, tags, date, journal
-   - **Enhanced Features**: attachments, starred, coordinates, timezone, all_day
-   
-2. **create_entry_with_attachments** (NEW)
-   - Specialized tool for creating entries with file attachments
-   - Supports photos, videos, audio, PDFs (up to 10 files)
-   - Parameters: content, attachments, tags, journal, starred
-   
-3. **create_location_entry** (NEW)
-   - Specialized tool for creating location-aware entries
-   - Add precise latitude/longitude coordinates
-   - Parameters: content, latitude, longitude, tags, journal, starred
-   
-4. **list_journals**
-   - Provides journal usage information (CLI doesn't support listing)
-   
-5. **get_entry_count**
-   - Explains entry counting limitations (CLI doesn't support counting)
+### ✍️ **Write Tools (CLI-based)**
+1. **create_journal_entry** - Create entries with rich metadata (attachments, location, tags, etc.)
+2. **create_entry_with_attachments** - Specialized for file attachments (photos, videos, audio, PDFs)
+3. **create_location_entry** - Specialized for location-aware entries with coordinates
+
+### 📖 **Read Tools (Database-based)**
+4. **read_recent_entries** - **NEW**: Read recent journal entries with full metadata
+   - Parameters: limit (1-50), journal (optional filter)
+   - Returns: Formatted entries with dates, tags, previews, starred status
+
+5. **search_entries** - **NEW**: Search entries by text content
+   - Parameters: search_text, limit (1-50), journal (optional filter)
+   - Returns: Matching entries with context and metadata
+
+6. **list_journals_from_db** - **NEW**: List actual journals with statistics
+   - Returns: Journal names, entry counts, last entry dates
+
+7. **get_entry_count_from_db** - **NEW**: Get real entry counts
+   - Parameters: journal (optional filter)
+   - Returns: Actual entry count from database
+
+### 📋 **Legacy Tools (CLI limitations)**
+8. **list_journals** - Provides guidance about CLI limitations
+9. **get_entry_count** - Explains CLI counting limitations
 
 ## Development
 
