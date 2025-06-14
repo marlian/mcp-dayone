@@ -40,7 +40,7 @@ class DayOneTools:
     
     def _get_db_path(self) -> Path:
         """Get the path to Day One database."""
-        db_path = Path.home() / "Library/Group Containers/5U8NS4GX82.dayoneapp2/Data/Documents/DayOneDB2.sqlite"
+        db_path = Path.home() / "Library/Group Containers/5U8NS4GX82.dayoneapp2/Data/Documents/DayOne.sqlite"
         return db_path
     
     def _get_db_connection(self) -> sqlite3.Connection:
@@ -223,38 +223,56 @@ class DayOneTools:
             # Base query to get entries with journal information
             query = """
             SELECT 
-                e.uuid,
-                e.text,
-                e.creationDate,
-                e.modifiedDate,
-                e.starred,
-                e.timeZone,
-                j.name as journal_name,
-                e.location,
-                e.weather
+                e.ZUUID as uuid,
+                e.ZRICHTEXTJSON as rich_text,
+                e.ZMARKDOWNTEXT as markdown_text,
+                e.ZCREATIONDATE as creationDate,
+                e.ZMODIFIEDDATE as modifiedDate,
+                e.ZSTARRED as starred,
+                e.ZTIMEZONE as timeZone,
+                j.ZNAME as journal_name,
+                e.ZLOCATION as location,
+                e.ZWEATHER as weather
             FROM ZENTRY e
-            LEFT JOIN ZJOURNAL j ON e.journal = j.Z_PK
+            LEFT JOIN ZJOURNAL j ON e.ZJOURNAL = j.Z_PK
             """
             
             params = []
             if journal:
-                query += " WHERE j.name = ?"
+                query += " WHERE j.ZNAME = ?"
                 params.append(journal)
             
-            query += " ORDER BY e.creationDate DESC LIMIT ?"
+            query += " ORDER BY e.ZCREATIONDATE DESC LIMIT ?"
             params.append(limit)
             
             cursor.execute(query, params)
             entries = []
             
             for row in cursor.fetchall():
+                # Extract text from rich text JSON or markdown
+                text_content = ""
+                if row['rich_text']:
+                    # Try to extract text from rich text JSON
+                    try:
+                        import json
+                        rich_data = json.loads(row['rich_text'])
+                        # Rich text format varies, try to extract plain text
+                        if isinstance(rich_data, dict) and 'text' in rich_data:
+                            text_content = rich_data['text']
+                        elif isinstance(rich_data, str):
+                            text_content = rich_data
+                    except:
+                        text_content = row['rich_text'][:500] if row['rich_text'] else ""
+                elif row['markdown_text']:
+                    text_content = row['markdown_text']
+                
                 entry = {
                     'uuid': row['uuid'],
-                    'text': row['text'] or '',
+                    'text': text_content or '',
                     'creation_date': datetime.fromtimestamp(row['creationDate'] + 978307200) if row['creationDate'] else None,  # Convert from Core Data timestamp
                     'modified_date': datetime.fromtimestamp(row['modifiedDate'] + 978307200) if row['modifiedDate'] else None,
                     'starred': bool(row['starred']),
-                    'timezone': row['timeZone'],
+                    'timezone': str(row['timeZone']) if row['timeZone'] else None,
                     'journal_name': row['journal_name'] or 'Default',
                     'has_location': bool(row['location']),
                     'has_weather': bool(row['weather'])
@@ -275,11 +293,11 @@ class DayOneTools:
         """Get tags for a specific entry."""
         try:
             cursor.execute("""
-                SELECT t.name 
+                SELECT t.ZNAME 
                 FROM ZTAG t
-                JOIN Z_5TAGS zt ON t.Z_PK = zt.Z_10TAGS
-                JOIN ZENTRY e ON zt.Z_5ENTRIES = e.Z_PK
-                WHERE e.uuid = ?
+                JOIN Z_13TAGS zt ON t.Z_PK = zt.Z_55TAGS1
+                JOIN ZENTRY e ON zt.Z_13ENTRIES = e.Z_PK
+                WHERE e.ZUUID = ?
             """, (entry_uuid,))
             
             return [row[0] for row in cursor.fetchall()]
@@ -306,38 +324,53 @@ class DayOneTools:
             
             query = """
             SELECT 
-                e.uuid,
-                e.text,
-                e.creationDate,
-                e.modifiedDate,
-                e.starred,
-                e.timeZone,
-                j.name as journal_name
+                e.ZUUID as uuid,
+                e.ZRICHTEXTJSON as rich_text,
+                e.ZMARKDOWNTEXT as markdown_text,
+                e.ZCREATIONDATE as creationDate,
+                e.ZMODIFIEDDATE as modifiedDate,
+                e.ZSTARRED as starred,
+                e.ZTIMEZONE as timeZone,
+                j.ZNAME as journal_name
             FROM ZENTRY e
-            LEFT JOIN ZJOURNAL j ON e.journal = j.Z_PK
-            WHERE e.text LIKE ?
+            LEFT JOIN ZJOURNAL j ON e.ZJOURNAL = j.Z_PK
+            WHERE (e.ZRICHTEXTJSON LIKE ? OR e.ZMARKDOWNTEXT LIKE ?)
             """
             
-            params = [f'%{search_text}%']
+            params = [f'%{search_text}%', f'%{search_text}%']
             
             if journal:
-                query += " AND j.name = ?"
+                query += " AND j.ZNAME = ?"
                 params.append(journal)
             
-            query += " ORDER BY e.creationDate DESC LIMIT ?"
+            query += " ORDER BY e.ZCREATIONDATE DESC LIMIT ?"
             params.append(limit)
             
             cursor.execute(query, params)
             entries = []
             
             for row in cursor.fetchall():
+                # Extract text from rich text JSON or markdown
+                text_content = ""
+                if row['rich_text']:
+                    try:
+                        rich_data = json.loads(row['rich_text'])
+                        if isinstance(rich_data, dict) and 'text' in rich_data:
+                            text_content = rich_data['text']
+                        elif isinstance(rich_data, str):
+                            text_content = rich_data
+                    except:
+                        text_content = row['rich_text'][:500] if row['rich_text'] else ""
+                elif row['markdown_text']:
+                    text_content = row['markdown_text']
+                
                 entry = {
                     'uuid': row['uuid'],
-                    'text': row['text'] or '',
+                    'text': text_content or '',
                     'creation_date': datetime.fromtimestamp(row['creationDate'] + 978307200) if row['creationDate'] else None,
                     'modified_date': datetime.fromtimestamp(row['modifiedDate'] + 978307200) if row['modifiedDate'] else None,
                     'starred': bool(row['starred']),
-                    'timezone': row['timeZone'],
+                    'timezone': str(row['timeZone']) if row['timeZone'] else None,
                     'journal_name': row['journal_name'] or 'Default'
                 }
                 
@@ -365,14 +398,14 @@ class DayOneTools:
             
             cursor.execute("""
                 SELECT 
-                    j.name,
-                    j.uuid,
+                    j.ZNAME as name,
+                    j.ZUUIDFORAUXILIARYSYNC as uuid,
                     COUNT(e.Z_PK) as entry_count,
-                    MAX(e.creationDate) as last_entry_date
+                    MAX(e.ZCREATIONDATE) as last_entry_date
                 FROM ZJOURNAL j
-                LEFT JOIN ZENTRY e ON e.journal = j.Z_PK
-                GROUP BY j.Z_PK, j.name, j.uuid
-                ORDER BY j.name
+                LEFT JOIN ZENTRY e ON e.ZJOURNAL = j.Z_PK
+                GROUP BY j.Z_PK, j.ZNAME, j.ZUUIDFORAUXILIARYSYNC
+                ORDER BY j.ZNAME
             """)
             
             journals = []
@@ -411,8 +444,8 @@ class DayOneTools:
                 cursor.execute("""
                     SELECT COUNT(*) 
                     FROM ZENTRY e
-                    JOIN ZJOURNAL j ON e.journal = j.Z_PK
-                    WHERE j.name = ?
+                    JOIN ZJOURNAL j ON e.ZJOURNAL = j.Z_PK
+                    WHERE j.ZNAME = ?
                 """, (journal,))
             else:
                 cursor.execute("SELECT COUNT(*) FROM ZENTRY")
