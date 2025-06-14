@@ -16,7 +16,7 @@ This MCP server enables Claude Desktop to interact with your Day One journal thr
 
 ## Prerequisites
 
-- **Day One CLI** (`dayone2`) - [Install from Day One website](https://dayoneapp.com/guides/command-line-interface/)
+- **Day One CLI** (`dayone2`) - [Install from Day One website](https://dayoneapp.com/guides/tips-and-tutorials/command-line-interface-cli)
 - **Python 3.11+** 
 - **uv** - [Install from astral.sh](https://astral.sh/uv/install.sh)
 
@@ -24,11 +24,17 @@ This MCP server enables Claude Desktop to interact with your Day One journal thr
 
 ### 1. Install Prerequisites
 
+**Day One CLI Installation:**
+1. Download and install Day One from the Mac App Store or Day One website
+2. Install the Day One CLI following the [official CLI guide](https://dayoneapp.com/guides/tips-and-tutorials/command-line-interface-cli)
+3. The CLI is included with Day One and accessible via the `dayone2` command
+
+**Python and uv:**
 ```bash
 # Install uv (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Verify Day One CLI is installed
+# Verify Day One CLI is installed and accessible
 dayone2 --version
 ```
 
@@ -69,7 +75,18 @@ Add the following to your Claude Desktop configuration file:
 
 **Important:** Replace `/FULL/PATH/TO/mcp-dayone` with the absolute path to your cloned repository.
 
-### 4. Restart Claude Desktop
+### 4. Test Installation (Optional)
+
+Verify everything is working:
+```bash
+# Test Day One CLI access
+dayone2 --version
+
+# Test MCP server setup
+uv run python test_setup.py
+```
+
+### 5. Restart Claude Desktop
 
 After updating the configuration, restart Claude Desktop to load the MCP server.
 
@@ -112,7 +129,7 @@ uv run pytest
 ### Day One CLI Not Found
 - Verify Day One CLI is installed: `dayone2 --version`  
 - Check that `dayone2` is in your PATH
-- Install from: https://dayoneapp.com/guides/command-line-interface/
+- Install Day One app and CLI from: https://dayoneapp.com/guides/tips-and-tutorials/command-line-interface-cli
 
 ### Claude Desktop Connection Issues
 - Verify the absolute path in `claude_desktop_config.json`

@@ -43,6 +43,13 @@ This is an MCP (Message Control Protocol) server that provides integration betwe
 - `uv run python test_setup.py` - Test installation and Day One CLI
 - `uv run pytest` - Run tests (when implemented)
 
+### Getting Started
+1. Install Day One app and CLI from [Day One CLI Guide](https://dayoneapp.com/guides/tips-and-tutorials/command-line-interface-cli)
+2. Verify CLI access: `dayone2 --version`
+3. Install project: `uv sync`
+4. Test setup: `uv run python test_setup.py`
+5. Configure Claude Desktop with absolute path to this project
+
 ### Legacy Commands (Node.js - removed)
 - ~~`npm start` - Start old REST server~~ (removed)
 - ~~`npm run dev` - Start with nodemon~~ (removed)
@@ -50,9 +57,9 @@ This is an MCP (Message Control Protocol) server that provides integration betwe
 ## Dependencies
 
 ### Required System Dependencies
-- Day One CLI (`dayone2`) - Must be installed and accessible in PATH
-- Python 3.11+
-- uv package manager
+- **Day One CLI** (`dayone2`) - Install from [Day One CLI Guide](https://dayoneapp.com/guides/tips-and-tutorials/command-line-interface-cli). Must be accessible in PATH.
+- **Python 3.11+** 
+- **uv package manager** - Install from [astral.sh](https://astral.sh/uv/install.sh)
 
 ### Python Dependencies
 - mcp>=1.0.0 - MCP protocol implementation
