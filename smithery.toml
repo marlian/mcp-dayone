@@ -1,22 +1,26 @@
 [smithery]
 name = "MCP-DayOne"
-version = "1.0.0"
+version = "2.0.0"
 description = "MCP server for Day One Journal integration with Claude Desktop"
-author = ""
+author = "Kevin Davison"
 license = "MIT"
 
 [install]
 dependencies = [
-    "node >= 14.0.0",
+    "python >= 3.11",
+    "uv",
     "dayone2"
 ]
 
 [install.steps]
-1 = "npm install"
+1 = "uv sync"
 
 [run]
-command = "npm start"
+command = "uv run python -m mcp_dayone.server"
+
+[test]
+command = "uv run python test_setup.py"
 
 [documentation]
-homepage = "https://github.com/yourusername/mcp-dayone"
+homepage = "https://github.com/Quevin/mcp-dayone"
 

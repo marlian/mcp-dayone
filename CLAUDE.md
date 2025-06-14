@@ -29,10 +29,11 @@ This is an MCP (Message Control Protocol) server that provides integration betwe
 - **pyproject.toml**: Python project dependencies and configuration
 - **.python-version**: Python version specification (3.11)
 
-### Legacy Node.js Files (to be removed):
-- **server.js**: Old Express.js REST API server
-- **claude-desktop.js**: Old client-side integration script
-- **test.js**: Old HTTP test client
+### Removed Legacy Files:
+- ~~**server.js**: Old Express.js REST API server~~ (removed)
+- ~~**claude-desktop.js**: Old client-side integration script~~ (removed)
+- ~~**test.js**: Old HTTP test client~~ (removed)
+- ~~**package.json, package-lock.json, node_modules/**: Node.js artifacts~~ (removed)
 
 ## Common Commands
 
@@ -42,9 +43,9 @@ This is an MCP (Message Control Protocol) server that provides integration betwe
 - `uv run python test_setup.py` - Test installation and Day One CLI
 - `uv run pytest` - Run tests (when implemented)
 
-### Legacy Commands (Node.js - deprecated)
-- `npm start` - Start old REST server
-- `npm run dev` - Start with nodemon
+### Legacy Commands (Node.js - removed)
+- ~~`npm start` - Start old REST server~~ (removed)
+- ~~`npm run dev` - Start with nodemon~~ (removed)
 
 ## Dependencies
 
