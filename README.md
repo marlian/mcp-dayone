@@ -108,6 +108,42 @@ After updating the configuration, restart Claude Desktop to load the MCP server.
 
 Once configured, you can interact with Day One through Claude Desktop:
 
+## Examples
+
+### 📅 **"On This Day" Feature**
+
+The MCP server excels at retrieving historical entries for reflection and memory recall:
+
+**Query:** *"Show me all my journal entries for 'on this day,' today: June 14th."*
+
+**Result:** Claude automatically:
+1. Uses the `get_entries_by_date` tool to search June 14th across multiple years
+2. Groups entries by year with "X years ago" labels
+3. Shows detailed content previews with timestamps and metadata
+4. Includes entry titles, photos/attachments indicators, and full context
+
+**Example Output:**
+```
+📅 On This Day (06-14) - Found 3 entries:
+
+🗓️ 2023 (2 years ago):
+   • Evening reflection (7:04 PM) - You wrote about feeling proud of bringing Keegan and 
+     Megan to the FORTIVE Box at T-Mobile Park. This entry includes photos and a video.
+   
+   • Midday quotes (12:49-12:51 PM) - Two entries with insights about emotions in 
+     professional settings:
+     • One about emotions being a valuable resource that shouldn't be ignored or hidden
+     • Another challenging the stigma around expressing emotion in workplace leadership
+
+No entries found for June 14th in other years (searched back 5 years).
+```
+
+This provides a powerful way to:
+- **Reflect on past experiences** from the same date
+- **Track personal growth** across years
+- **Rediscover forgotten memories** and insights
+- **See patterns** in your life and thinking
+
 ### ✍️ **Creating Entries**
 - **"Create a journal entry about my day"** - Creates entry with your content
 - **"Create a starred entry about my vacation with photos from /path/to/photo.jpg"** - Creates entries with attachments and metadata
