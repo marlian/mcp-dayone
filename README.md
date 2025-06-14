@@ -8,7 +8,11 @@ This MCP server enables Claude Desktop to interact with your Day One journal thr
 
 ## Features
 
-- 📝 Create journal entries with content, tags, dates, and journal selection
+- 📝 Create journal entries with rich content and metadata
+- 📎 **NEW**: Add attachments (photos, videos, audio, PDFs) to entries
+- ⭐ **NEW**: Mark entries as starred/important
+- 📍 **NEW**: Add location coordinates to entries
+- 🕐 **NEW**: Enhanced date/time handling with timezone support
 - 📚 List all available Day One journals
 - 📊 Get entry counts for journals
 - 🔧 Proper error handling and validation
@@ -95,15 +99,20 @@ After updating the configuration, restart Claude Desktop to load the MCP server.
 Once configured, you can interact with Day One through Claude Desktop:
 
 - **"Create a journal entry about my day"** - Claude will create an entry with your content
+- **"Create a starred entry about my vacation with photos from /path/to/photo.jpg"** - Creates entries with attachments and metadata
+- **"Add a journal entry with location coordinates for my current trip"** - Creates location-aware entries
 - **"List my Day One journals"** - Shows all available journals
 - **"How many entries do I have?"** - Shows total entry count
 - **"Add tags #work #meeting to an entry about the team standup"** - Creates tagged entries
 
 ## Available MCP Tools
 
-1. **create_journal_entry**
-   - Create new Day One entries
-   - Parameters: content, tags, date, journal
+1. **create_journal_entry** (Enhanced)
+   - Create new Day One entries with rich metadata
+   - **Basic Parameters**: content, tags, date, journal
+   - **NEW - Attachments**: attachments (up to 10 files: photos, videos, audio, PDFs)
+   - **NEW - Metadata**: starred (mark as important), coordinates (latitude/longitude)
+   - **NEW - Time**: timezone, all_day (full-day events)
    
 2. **list_journals**
    - List all available journals

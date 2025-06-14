@@ -28,6 +28,11 @@ class CreateEntryArgs(BaseModel):
     tags: list[str] = Field(default=[], description="Optional list of tags for the entry")
     date: str = Field(default="", description="Optional date in YYYY-MM-DD HH:MM:SS format")
     journal: str = Field(default="", description="Optional journal name")
+    attachments: list[str] = Field(default=[], description="Optional list of file paths to attach (max 10)")
+    starred: bool = Field(default=False, description="Mark entry as starred/important")
+    coordinates: dict[str, float] = Field(default={}, description="Optional coordinates with 'latitude' and 'longitude' keys")
+    timezone: str = Field(default="", description="Optional timezone (e.g., 'America/New_York')")
+    all_day: bool = Field(default=False, description="Mark as all-day event")
 
 class ListJournalsArgs(BaseModel):
     pass
@@ -43,7 +48,7 @@ def get_available_tools() -> list[Tool]:
     return [
         Tool(
             name="create_journal_entry",
-            description="Create a new entry in Day One journal",
+            description="Create a new entry in Day One journal with support for attachments, location, and metadata",
             inputSchema=CreateEntryArgs.model_json_schema(),
         ),
         Tool(
@@ -66,6 +71,11 @@ async def handle_create_journal_entry(args: CreateEntryArgs) -> list[TextContent
             tags=args.tags if args.tags else None,
             date=args.date if args.date else None,
             journal=args.journal if args.journal else None,
+            attachments=args.attachments if args.attachments else None,
+            starred=args.starred if args.starred else None,
+            coordinates=args.coordinates if args.coordinates else None,
+            timezone=args.timezone if args.timezone else None,
+            all_day=args.all_day if args.all_day else None,
         )
         return [TextContent(
             type="text",
