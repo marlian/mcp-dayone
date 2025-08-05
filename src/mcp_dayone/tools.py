@@ -132,8 +132,7 @@ class DayOneTools:
         
         # Add coordinates
         if coordinates:
-            coord_str = f"{coordinates['latitude']} {coordinates['longitude']}"
-            cmd.extend(["--coordinate", coord_str])
+            cmd.extend(["--coordinate", str(coordinates['latitude']), str(coordinates['longitude'])])
         
         # Add timezone
         if timezone:
@@ -142,6 +141,11 @@ class DayOneTools:
         # Add all-day flag
         if all_day:
             cmd.append("--all-day")
+        
+        # Add separator if we have any options
+        has_options = any([attachments, tags, journal, date, starred, coordinates, timezone, all_day])
+        if has_options:
+            cmd.append("--")
         
         # Add the command and content
         cmd.extend(["new", content])
