@@ -191,3 +191,6 @@ config.json
 claude_desktop_config.json
 personal_config.*
 user_settings.*
+
+# Fork documentation (keep local)
+README-FORK.md
