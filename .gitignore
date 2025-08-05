@@ -172,3 +172,22 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# MCP & Day One specific
+*.sqlite
+*.db
+logs/
+*.log.*
+.DS_Store
+.vscode/
+*_backup
+test_entries/
+attachments/
+temp/
+tmp/
+
+# Personal configuration files
+config.json
+claude_desktop_config.json
+personal_config.*
+user_settings.*
