@@ -657,3 +657,70 @@ class DayOneTools:
             raise DayOneError(f"Failed to get entries by date: {e}")
         except ValueError as e:
             raise DayOneError(f"Date parsing error: {e}")
+
+    def read_full_entry_by_uuid(self, entry_uuid: str, include_metadata: bool = True) -> Dict[str, Any]:
+        """Read a complete journal entry by UUID with full text content.
+        
+        Args:
+            entry_uuid: UUID of the entry to retrieve
+            include_metadata: Whether to include full metadata
+            
+        Returns:
+            Complete entry dictionary with full text
+            
+        Raises:
+            DayOneError: If database access fails or entry not found
+        """
+        try:
+            conn = self._get_db_connection()
+            cursor = conn.cursor()
+            
+            # Get the entry with all details
+            cursor.execute("""
+                SELECT 
+                    e.ZUUID as uuid,
+                    e.ZRICHTEXTJSON as rich_text,
+                    e.ZMARKDOWNTEXT as markdown_text,
+                    e.ZCREATIONDATE as creationDate,
+                    e.ZMODIFIEDDATE as modifiedDate,
+                    e.ZSTARRED as starred,
+                    e.ZTIMEZONE as timeZone,
+                    j.ZNAME as journal_name,
+                    e.ZLOCATION as location,
+                    e.ZWEATHER as weather
+                FROM ZENTRY e
+                LEFT JOIN ZJOURNAL j ON e.ZJOURNAL = j.Z_PK
+                WHERE e.ZUUID = ?
+            """, (entry_uuid,))
+            
+            row = cursor.fetchone()
+            if not row:
+                conn.close()
+                return None
+            
+            # Extract complete text content (no truncation)
+            text_content = self._extract_text_content(row['rich_text'], row['markdown_text'])
+            
+            entry = {
+                'uuid': row['uuid'],
+                'text': text_content or '',
+                'creation_date': datetime.fromtimestamp(row['creationDate'] + 978307200) if row['creationDate'] else None,
+                'modified_date': datetime.fromtimestamp(row['modifiedDate'] + 978307200) if row['modifiedDate'] else None,
+                'starred': bool(row['starred']),
+                'timezone': str(row['timeZone']) if row['timeZone'] else None,
+                'journal_name': row['journal_name'] or 'Default',
+                'has_location': bool(row['location']),
+                'has_weather': bool(row['weather'])
+            }
+            
+            if include_metadata:
+                # Get tags for this entry
+                entry['tags'] = self._get_entry_tags(cursor, row['uuid'])
+            else:
+                entry['tags'] = []
+            
+            conn.close()
+            return entry
+            
+        except sqlite3.Error as e:
+            raise DayOneError(f"Failed to read full entry by UUID: {e}")

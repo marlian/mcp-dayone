@@ -73,6 +73,10 @@ class GetEntriesByDateArgs(BaseModel):
     target_date: str = Field(description="Target date in MM-DD or YYYY-MM-DD format (e.g., '06-14' for June 14th)")
     years_back: int = Field(default=5, description="How many years back to search (default 5)")
 
+class ReadFullEntryArgs(BaseModel):
+    entry_uuid: str = Field(description="UUID of the entry to read in full")
+    include_metadata: bool = Field(default=True, description="Include full metadata (tags, location, etc.)")
+
 # Global Day One tools instance
 dayone_tools: DayOneTools = None
 
@@ -128,6 +132,11 @@ def get_available_tools() -> list[Tool]:
             name="get_entries_by_date",
             description="Get journal entries for a specific date across multiple years ('On This Day' feature)",
             inputSchema=GetEntriesByDateArgs.model_json_schema(),
+        ),
+        Tool(
+            name="read_full_entry",
+            description="Read a complete journal entry by UUID with full text content and metadata",
+            inputSchema=ReadFullEntryArgs.model_json_schema(),
         ),
     ]
 
@@ -257,11 +266,11 @@ async def handle_read_recent_entries(args: ReadRecentEntriesArgs) -> list[TextCo
             starred_str = " ⭐" if entry['starred'] else ""
             tags_str = f" #{' #'.join(entry['tags'])}" if entry['tags'] else ""
             
-            # Truncate text for preview
-            text_preview = entry['text'][:100] + "..." if len(entry['text']) > 100 else entry['text']
+            # Truncate text for preview - increased from 100 to 300 chars
+            text_preview = entry['text'][:300] + "..." if len(entry['text']) > 300 else entry['text']
             
             result_lines.append(
-                f"{i}. {date_str}{starred_str} [{entry['journal_name']}]\n"
+                f"{i}. {date_str}{starred_str} [{entry['journal_name']}] (UUID: {entry['uuid']})\n"
                 f"   {text_preview}{tags_str}\n"
             )
         
@@ -302,11 +311,11 @@ async def handle_search_entries(args: SearchEntriesArgs) -> list[TextContent]:
             starred_str = " ⭐" if entry['starred'] else ""
             tags_str = f" #{' #'.join(entry['tags'])}" if entry['tags'] else ""
             
-            # Show more context for search results
-            text_preview = entry['text'][:200] + "..." if len(entry['text']) > 200 else entry['text']
+            # Show more context for search results - increased from 200 to 400 chars
+            text_preview = entry['text'][:400] + "..." if len(entry['text']) > 400 else entry['text']
             
             result_lines.append(
-                f"{i}. {date_str}{starred_str} [{entry['journal_name']}]\n"
+                f"{i}. {date_str}{starred_str} [{entry['journal_name']}] (UUID: {entry['uuid']})\n"
                 f"   {text_preview}{tags_str}\n"
             )
         
@@ -419,11 +428,11 @@ async def handle_get_entries_by_date(args: GetEntriesByDateArgs) -> list[TextCon
                 starred_str = " ⭐" if entry['starred'] else ""
                 tags_str = f" #{' #'.join(entry['tags'])}" if entry['tags'] else ""
                 
-                # Show more content for "On This Day" memories
-                text_preview = entry['text'][:300] + "..." if len(entry['text']) > 300 else entry['text']
+                # Show more content for "On This Day" memories - increased from 300 to 500
+                text_preview = entry['text'][:500] + "..." if len(entry['text']) > 500 else entry['text']
                 
                 result_lines.append(
-                    f"   • {date_str}{starred_str} [{entry['journal_name']}]\n"
+                    f"   • {date_str}{starred_str} [{entry['journal_name']}] (UUID: {entry['uuid']})\n"
                     f"     {text_preview}{tags_str}\n"
                 )
         
@@ -436,6 +445,66 @@ async def handle_get_entries_by_date(args: GetEntriesByDateArgs) -> list[TextCon
         return [TextContent(
             type="text",
             text=f"Error getting entries by date: {str(e)}"
+        )]
+
+async def handle_read_full_entry(args: ReadFullEntryArgs) -> list[TextContent]:
+    """Handle reading a complete journal entry by UUID."""
+    try:
+        entry = dayone_tools.read_full_entry_by_uuid(
+            entry_uuid=args.entry_uuid,
+            include_metadata=args.include_metadata
+        )
+        
+        if not entry:
+            return [TextContent(
+                type="text",
+                text=f"No entry found with UUID: {args.entry_uuid}"
+            )]
+        
+        # Format the complete entry
+        result_lines = []
+        
+        # Header with metadata
+        date_str = entry['creation_date'].strftime("%A, %B %d, %Y at %H:%M") if entry['creation_date'] else "Unknown date"
+        starred_str = " ⭐" if entry['starred'] else ""
+        
+        result_lines.append(f"📖 Journal Entry{starred_str}")
+        result_lines.append(f"📅 {date_str}")
+        result_lines.append(f"📚 Journal: {entry['journal_name']}")
+        
+        if args.include_metadata:
+            if entry['tags']:
+                result_lines.append(f"🏷️ Tags: #{' #'.join(entry['tags'])}")
+            
+            if entry['timezone']:
+                result_lines.append(f"🌍 Timezone: {entry['timezone']}")
+            
+            if entry['has_location']:
+                result_lines.append(f"📍 Has location data")
+            
+            if entry['has_weather']:
+                result_lines.append(f"☀️ Has weather data")
+            
+            if entry['modified_date'] and entry['modified_date'] != entry['creation_date']:
+                mod_date_str = entry['modified_date'].strftime("%Y-%m-%d %H:%M")
+                result_lines.append(f"✏️ Last modified: {mod_date_str}")
+        
+        result_lines.append(f"🆔 UUID: {entry['uuid']}")
+        result_lines.append("")  # Empty line before content
+        result_lines.append("📝 Content:")
+        result_lines.append("-" * 40)
+        result_lines.append(entry['text'])
+        result_lines.append("-" * 40)
+        
+        return [TextContent(
+            type="text",
+            text="\n".join(result_lines)
+        )]
+        
+    except DayOneError as e:
+        return [TextContent(
+            type="text",
+            text=f"Error reading full entry: {str(e)}"
         )]
 
 
@@ -494,6 +563,9 @@ async def main():
                 elif name == "get_entries_by_date":
                     args = GetEntriesByDateArgs(**arguments)
                     return await handle_get_entries_by_date(args)
+                elif name == "read_full_entry":
+                    args = ReadFullEntryArgs(**arguments)
+                    return await handle_read_full_entry(args)
                 else:
                     raise ValueError(f"Unknown tool: {name}")
             
