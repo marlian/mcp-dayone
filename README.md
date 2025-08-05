@@ -2,6 +2,8 @@
 
 A Model Context Protocol (MCP) server for Day One Journal integration with Claude Desktop.
 
+> **💡 Fork Notice**: This fork includes critical CLI integration fixes. See [README-FORK.md](./README-FORK.md) for details on improvements made.
+
 ## Overview
 
 This MCP server enables Claude Desktop to interact with your Day One journal through the Model Context Protocol. Claude can create journal entries, list available journals, and get entry counts directly through natural conversation.
