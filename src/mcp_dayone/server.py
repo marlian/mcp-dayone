@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-from typing import Any, Sequence
 
 from mcp.server import Server
 from mcp.server.models import InitializationOptions
