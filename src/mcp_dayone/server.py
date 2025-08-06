@@ -640,16 +640,16 @@ async def main():
         except Exception as e:
             logger.warning(f"⚠️ Database test failed (but continuing): {e}")
         
-        # Give the tools a moment to fully initialize
-        logger.info("⏱️ Waiting for complete initialization...")
-        await asyncio.sleep(2)
         logger.info("🚀 Day One tools fully initialized and ready")
         
     except DayOneError as e:
         logger.error(f"❌ Failed to initialize Day One tools: {e}")
         return 1
-    
-    
+
+    # Create and run server
+    async with stdio_server() as (read_stream, write_stream):
+        server = Server("mcp-dayone")
+        
         # Register handlers with request logging
         @server.list_tools()
         async def handle_list_tools() -> list[Tool]:
@@ -722,19 +722,18 @@ async def main():
                     text=f"Error: {str(e)}"
                 )]
         
-        # Create and run server
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(
-                read_stream,
-                write_stream,
-                InitializationOptions(
-                    server_name="mcp-dayone",
-                    server_version="2.0.0",
-                    capabilities=ServerCapabilities(
-                        tools=ToolsCapability(listChanged=False)
-                    ),
+        # Run the server  
+        await server.run(
+            read_stream,
+            write_stream,
+            InitializationOptions(
+                server_name="mcp-dayone",
+                server_version="2.0.0",
+                capabilities=ServerCapabilities(
+                    tools=ToolsCapability(listChanged=False)
                 ),
-            )
+            ),
+        )
 
 if __name__ == "__main__":
     asyncio.run(main())
