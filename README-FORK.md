@@ -49,7 +49,54 @@ All MCP tools now work perfectly:
 - ✅ **Tagged entries**: `tags=['work', 'meeting']`
 - ✅ **Starred entries**: `starred=True`
 - ✅ **Location entries**: `coordinates={'latitude': 45.4642, 'longitude': 9.1900}`
-- ✅ **All 10 MCP tools**: Read + Write operations fully functional
+- ✅ **All 12 MCP tools**: Read + Write operations fully functional
+
+## ✨ **NEW: Entry Update Functions**
+
+This fork adds **two powerful new MCP tools** for editing existing journal entries:
+
+### 🔄 **`update_entry`** - Replace Content
+```python
+# Replace entire content of an existing entry
+update_entry(
+    entry_uuid="ABC123...",
+    content="# Updated Title\n\nCompletely new content here!",
+    preserve_metadata=True  # Keeps tags, location, weather, etc.
+)
+```
+
+### ➕ **`append_to_entry`** - Add Content  
+```python
+# Append to existing entry (more efficient)
+append_to_entry(
+    entry_uuid="ABC123...",
+    content="\n\n## New Section\n\nAdditional thoughts...",
+    separator="\n\n"  # Customizable separator
+)
+```
+
+### 🎯 **Perfect Workflow**
+```python
+# 1. Find your entry
+entries = read_recent_entries(limit=5)
+target_entry = entries[0]  # Get the latest
+
+# 2. Read full content
+full_entry = read_full_entry(target_entry['uuid'])
+
+# 3. Add more content (no duplication!)
+append_to_entry(
+    entry_uuid=target_entry['uuid'],
+    content="\n\n## Shopping List\n- Milk\n- Bread"
+)
+```
+
+### ✅ **Key Features**
+- 🔒 **Metadata preserved**: Tags, location, weather, starred status
+- ⏰ **Auto-timestamps**: Modified date updated automatically
+- 🎨 **Markdown rendering**: Proper Day One formatting (not raw markdown)
+- 🚫 **No duplication**: Edit existing entries instead of creating new ones
+- ⚡ **Efficient**: `append_to_entry` is faster than full rewrites
 
 ## 🚀 **Installation**
 
@@ -80,6 +127,9 @@ Claude Desktop config:
 |------|--------|---------|
 | `src/mcp_dayone/tools.py` | Fixed CLI syntax with `--` separator | ✅ Write operations work |
 | `src/mcp_dayone/tools.py` | Fixed coordinate parameter handling | ✅ Location entries work |
+| `src/mcp_dayone/tools.py` | **NEW:** Added `update_entry()` function | ✨ Edit existing entries |
+| `src/mcp_dayone/tools.py` | **NEW:** Added `append_to_entry()` function | ✨ Append to entries efficiently |
+| `src/mcp_dayone/server.py` | **NEW:** Added MCP handlers for update functions | 🔧 Full MCP integration |
 | `.gitignore` | Added MCP-specific patterns | 🔒 Better security |
 
 ## 🎯 **For Upstream**
