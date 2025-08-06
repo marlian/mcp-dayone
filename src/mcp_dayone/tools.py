@@ -724,3 +724,119 @@ class DayOneTools:
             
         except sqlite3.Error as e:
             raise DayOneError(f"Failed to read full entry by UUID: {e}")
+    
+    def update_entry(self, entry_uuid: str, content: str, preserve_metadata: bool = True) -> Dict[str, Any]:
+        """Update an existing journal entry by replacing its content completely.
+        
+        Args:
+            entry_uuid: UUID of the entry to update
+            content: New content to replace existing content
+            preserve_metadata: Whether to preserve existing metadata (tags, location, etc.)
+            
+        Returns:
+            Updated entry dictionary
+            
+        Raises:
+            DayOneError: If database access fails or entry not found
+        """
+        if not content.strip():
+            raise DayOneError("Entry content cannot be empty")
+        
+        try:
+            conn = self._get_db_connection()
+            cursor = conn.cursor()
+            
+            # First, verify the entry exists
+            cursor.execute("SELECT ZUUID FROM ZENTRY WHERE ZUUID = ?", (entry_uuid,))
+            if not cursor.fetchone():
+                conn.close()
+                raise DayOneError(f"Entry with UUID {entry_uuid} not found")
+            
+            # Update the entry content and modification date
+            # Convert current time to Core Data timestamp
+            modified_timestamp = datetime.now().timestamp() - 978307200
+            
+            # Day One CLI uses ZMARKDOWNTEXT and leaves ZRICHTEXTJSON as NULL
+            # This allows proper markdown rendering in the app
+            cursor.execute("""
+                UPDATE ZENTRY 
+                SET ZRICHTEXTJSON = NULL, 
+                    ZMARKDOWNTEXT = ?, 
+                    ZMODIFIEDDATE = ?
+                WHERE ZUUID = ?
+            """, (content, modified_timestamp, entry_uuid))
+            
+            conn.commit()
+            conn.close()
+            
+            # Return the updated entry
+            return self.read_full_entry_by_uuid(entry_uuid)
+            
+        except sqlite3.Error as e:
+            if conn:
+                conn.rollback()
+                conn.close()
+            raise DayOneError(f"Failed to update entry: {e}")
+    
+    def append_to_entry(self, entry_uuid: str, content: str, separator: str = "\n\n") -> Dict[str, Any]:
+        """Append content to an existing journal entry.
+        
+        Args:
+            entry_uuid: UUID of the entry to append to
+            content: Content to append to existing entry
+            separator: Separator between existing content and new content
+            
+        Returns:
+            Updated entry dictionary
+            
+        Raises:
+            DayOneError: If database access fails or entry not found
+        """
+        if not content.strip():
+            raise DayOneError("Content to append cannot be empty")
+        
+        try:
+            conn = self._get_db_connection()
+            cursor = conn.cursor()
+            
+            # Get the current entry content
+            cursor.execute("""
+                SELECT ZRICHTEXTJSON, ZMARKDOWNTEXT 
+                FROM ZENTRY 
+                WHERE ZUUID = ?
+            """, (entry_uuid,))
+            
+            row = cursor.fetchone()
+            if not row:
+                conn.close()
+                raise DayOneError(f"Entry with UUID {entry_uuid} not found")
+            
+            # Extract current content
+            current_content = self._extract_text_content(row['ZRICHTEXTJSON'], row['ZMARKDOWNTEXT'])
+            
+            # Combine existing content with new content
+            updated_content = current_content + separator + content
+            
+            # Update the entry with combined content
+            modified_timestamp = datetime.now().timestamp() - 978307200
+            
+            # Use ZMARKDOWNTEXT like Day One CLI does, leave ZRICHTEXTJSON as NULL
+            cursor.execute("""
+                UPDATE ZENTRY 
+                SET ZRICHTEXTJSON = NULL, 
+                    ZMARKDOWNTEXT = ?, 
+                    ZMODIFIEDDATE = ?
+                WHERE ZUUID = ?
+            """, (updated_content, modified_timestamp, entry_uuid))
+            
+            conn.commit()
+            conn.close()
+            
+            # Return the updated entry
+            return self.read_full_entry_by_uuid(entry_uuid)
+            
+        except sqlite3.Error as e:
+            if conn:
+                conn.rollback()
+                conn.close()
+            raise DayOneError(f"Failed to append to entry: {e}")

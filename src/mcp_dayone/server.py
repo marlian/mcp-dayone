@@ -76,6 +76,16 @@ class ReadFullEntryArgs(BaseModel):
     entry_uuid: str = Field(description="UUID of the entry to read in full")
     include_metadata: bool = Field(default=True, description="Include full metadata (tags, location, etc.)")
 
+class UpdateEntryArgs(BaseModel):
+    entry_uuid: str = Field(description="UUID of the entry to update")
+    content: str = Field(description="New content to replace existing content")
+    preserve_metadata: bool = Field(default=True, description="Whether to preserve existing metadata")
+
+class AppendToEntryArgs(BaseModel):
+    entry_uuid: str = Field(description="UUID of the entry to append to")
+    content: str = Field(description="Content to append to existing entry")
+    separator: str = Field(default="\n\n", description="Separator between existing and new content")
+
 # Global Day One tools instance
 dayone_tools: DayOneTools = None
 
@@ -136,6 +146,16 @@ def get_available_tools() -> list[Tool]:
             name="read_full_entry",
             description="Read a complete journal entry by UUID with full text content and metadata",
             inputSchema=ReadFullEntryArgs.model_json_schema(),
+        ),
+        Tool(
+            name="update_entry",
+            description="Update an existing journal entry by replacing its content completely",
+            inputSchema=UpdateEntryArgs.model_json_schema(),
+        ),
+        Tool(
+            name="append_to_entry", 
+            description="Append content to an existing journal entry (more efficient than full update)",
+            inputSchema=AppendToEntryArgs.model_json_schema(),
         ),
     ]
 
@@ -506,6 +526,76 @@ async def handle_read_full_entry(args: ReadFullEntryArgs) -> list[TextContent]:
             text=f"Error reading full entry: {str(e)}"
         )]
 
+async def handle_update_entry(args: UpdateEntryArgs) -> list[TextContent]:
+    """Handle updating an existing journal entry."""
+    try:
+        updated_entry = dayone_tools.update_entry(
+            entry_uuid=args.entry_uuid,
+            content=args.content,
+            preserve_metadata=args.preserve_metadata
+        )
+        
+        if not updated_entry:
+            return [TextContent(
+                type="text",
+                text=f"Failed to update entry with UUID: {args.entry_uuid}"
+            )]
+        
+        # Format response with updated entry info
+        date_str = updated_entry['creation_date'].strftime("%A, %B %d, %Y at %H:%M") if updated_entry['creation_date'] else "Unknown date"
+        modified_str = updated_entry['modified_date'].strftime("%Y-%m-%d %H:%M:%S") if updated_entry['modified_date'] else "Unknown"
+        
+        return [TextContent(
+            type="text",
+            text=f"✅ Successfully updated journal entry!\n\n"
+                 f"📖 Entry: {date_str}\n"
+                 f"🔄 Last Modified: {modified_str}\n"
+                 f"📚 Journal: {updated_entry['journal_name']}\n"
+                 f"🆔 UUID: {args.entry_uuid}\n\n"
+                 f"Content preview: {updated_entry['text'][:200]}{'...' if len(updated_entry['text']) > 200 else ''}"
+        )]
+        
+    except DayOneError as e:
+        return [TextContent(
+            type="text",
+            text=f"❌ Error updating entry: {str(e)}"
+        )]
+
+async def handle_append_to_entry(args: AppendToEntryArgs) -> list[TextContent]:
+    """Handle appending content to an existing journal entry."""
+    try:
+        updated_entry = dayone_tools.append_to_entry(
+            entry_uuid=args.entry_uuid,
+            content=args.content,
+            separator=args.separator
+        )
+        
+        if not updated_entry:
+            return [TextContent(
+                type="text",
+                text=f"Failed to append to entry with UUID: {args.entry_uuid}"
+            )]
+        
+        # Format response with updated entry info
+        date_str = updated_entry['creation_date'].strftime("%A, %B %d, %Y at %H:%M") if updated_entry['creation_date'] else "Unknown date"
+        modified_str = updated_entry['modified_date'].strftime("%Y-%m-%d %H:%M:%S") if updated_entry['modified_date'] else "Unknown"
+        
+        return [TextContent(
+            type="text",
+            text=f"✅ Successfully appended to journal entry!\n\n"
+                 f"📖 Entry: {date_str}\n"
+                 f"🔄 Last Modified: {modified_str}\n"
+                 f"📚 Journal: {updated_entry['journal_name']}\n"
+                 f"🆔 UUID: {args.entry_uuid}\n\n"
+                 f"📎 Appended content: {args.content[:100]}{'...' if len(args.content) > 100 else ''}\n"
+                 f"📄 Total length: {len(updated_entry['text'])} characters"
+        )]
+        
+    except DayOneError as e:
+        return [TextContent(
+            type="text",
+            text=f"❌ Error appending to entry: {str(e)}"
+        )]
 
 
 async def main():
@@ -565,6 +655,12 @@ async def main():
                 elif name == "read_full_entry":
                     args = ReadFullEntryArgs(**arguments)
                     return await handle_read_full_entry(args)
+                elif name == "update_entry":
+                    args = UpdateEntryArgs(**arguments)
+                    return await handle_update_entry(args)
+                elif name == "append_to_entry":
+                    args = AppendToEntryArgs(**arguments)
+                    return await handle_append_to_entry(args)
                 else:
                     raise ValueError(f"Unknown tool: {name}")
             
