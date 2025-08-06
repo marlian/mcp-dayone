@@ -2,6 +2,9 @@
 
 import asyncio
 import logging
+import json
+import datetime
+from pathlib import Path
 
 from mcp.server import Server
 from mcp.server.models import InitializationOptions
@@ -19,6 +22,26 @@ from .tools import DayOneTools, DayOneError
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# 🔍 REQUEST LOGGER - Debug MCP communication
+def log_mcp_request(request_data, source="unknown"):
+    """Log all MCP requests to file for debugging."""
+    log_dir = Path(__file__).parent.parent.parent / "mcp_request_logs"
+    log_dir.mkdir(exist_ok=True)
+    
+    timestamp = datetime.datetime.now().isoformat()
+    log_file = log_dir / f"dayone_requests_{datetime.datetime.now().strftime('%Y%m%d')}.log"
+    
+    log_entry = {
+        "timestamp": timestamp,
+        "source": source,
+        "request": request_data
+    }
+    
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(json.dumps(log_entry, indent=2, ensure_ascii=False) + "\n" + "="*80 + "\n")
+    
+    logger.info(f"🔍 [DEBUG] Logged request from {source} to {log_file}")
 
 # Tool argument models
 class CreateEntryArgs(BaseModel):
@@ -602,26 +625,54 @@ async def main():
     """Main server entry point."""
     global dayone_tools
     
-    # Initialize Day One tools
+    # Initialize Day One tools with enhanced logging
     try:
+        logger.info("🔄 Initializing Day One tools...")
         dayone_tools = DayOneTools()
-        logger.info("Day One CLI verified successfully")
+        logger.info("✅ Day One CLI verified successfully")
+        
+        # Test basic functionality to ensure everything is ready
+        logger.info("🧪 Testing Day One functionality...")
+        try:
+            db_conn = dayone_tools._get_db_connection()
+            db_conn.close()
+            logger.info("✅ Database connection test successful")
+        except Exception as e:
+            logger.warning(f"⚠️ Database test failed (but continuing): {e}")
+        
+        # Give the tools a moment to fully initialize
+        logger.info("⏱️ Waiting for complete initialization...")
+        await asyncio.sleep(2)
+        logger.info("🚀 Day One tools fully initialized and ready")
+        
     except DayOneError as e:
-        logger.error(f"Failed to initialize Day One tools: {e}")
+        logger.error(f"❌ Failed to initialize Day One tools: {e}")
         return 1
     
-    # Create and run server
-    async with stdio_server() as (read_stream, write_stream):
-        server = Server("mcp-dayone")
-        
-        # Register handlers
+    
+        # Register handlers with request logging
         @server.list_tools()
         async def handle_list_tools() -> list[Tool]:
+            log_mcp_request({"method": "tools/list", "timestamp": datetime.datetime.now().isoformat()}, "tools_list_request")
             return get_available_tools()
         
         @server.call_tool()
         async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             try:
+                # 🔍 Log the tool call request
+                request_data = {
+                    "method": "tools/call",
+                    "tool_name": name,
+                    "arguments": arguments,
+                    "timestamp": datetime.datetime.now().isoformat()
+                }
+                log_mcp_request(request_data, "tool_call_request")
+                
+                # 🐛 DEBUG: Log what we actually receive (keep existing debug)
+                logger.info(f"🔧 Tool called: {name}")
+                logger.info(f"📥 Arguments received: {arguments}")
+                logger.info(f"📝 Arguments type: {type(arguments)}")
+                
                 if name == "create_journal_entry":
                     args = CreateEntryArgs(**arguments)
                     return await handle_create_journal_entry(args)
@@ -671,17 +722,19 @@ async def main():
                     text=f"Error: {str(e)}"
                 )]
         
-        await server.run(
-            read_stream,
-            write_stream,
-            InitializationOptions(
-                server_name="mcp-dayone",
-                server_version="2.0.0",
-                capabilities=ServerCapabilities(
-                    tools=ToolsCapability(listChanged=False)
+        # Create and run server
+        async with stdio_server() as (read_stream, write_stream):
+            await server.run(
+                read_stream,
+                write_stream,
+                InitializationOptions(
+                    server_name="mcp-dayone",
+                    server_version="2.0.0",
+                    capabilities=ServerCapabilities(
+                        tools=ToolsCapability(listChanged=False)
+                    ),
                 ),
-            ),
-        )
+            )
 
 if __name__ == "__main__":
     asyncio.run(main())
